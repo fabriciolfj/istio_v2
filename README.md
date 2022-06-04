@@ -3,6 +3,10 @@
 - fazer roteamento com base em metadados externos que fazem parte da solicitação
 - controle de tráfico e roteamento de baixa granularidade
 - protege e impõe políticas de cotas de uso
+```
+istioctl install --set profile=demo -y
+kubectl apply -f ./samples/addons  
+```
 
 ### Plano de controle
 - fornece maneiras para o usuário controlar, observar, gerenciar e configurar a malha

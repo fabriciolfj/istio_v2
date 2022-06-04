@@ -1,0 +1,1 @@
+kubectl label namespace istioinaction istio-injection=enabled
