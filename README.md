@@ -7,3 +7,6 @@
 ### Plano de controle
 - fornece maneiras para o usuário controlar, observar, gerenciar e configurar a malha
 - é implementado pelo istiod, que pega as configurações especificadas pelo usuário, que são expresas através de recursos
+
+### Gerenciamento de identidade
+- quando 2 serviços se comunicam dentro da malha, os proxies de ambos de comunicam, podemos encriptar o tráfego atráves de certificados x.509
