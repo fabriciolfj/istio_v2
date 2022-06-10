@@ -57,3 +57,8 @@ spec:
     labels:
       version: v2
 ```
+
+### Envoy
+- é um proxy 
+- proxy é um componente que fica no meio da comunicação entre cliente e servidor
+- proxy tem a função
