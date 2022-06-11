@@ -1,0 +1,1 @@
+docker run -it --rm --link proxy curlimages/curl curl -X GET http://proxy:15000/stats

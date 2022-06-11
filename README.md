@@ -61,4 +61,24 @@ spec:
 ### Envoy
 - é um proxy 
 - proxy é um componente que fica no meio da comunicação entre cliente e servidor
-- proxy tem a função
+- proxy pode possuir algumas funções, como:
+  - balancedor de carga
+  - verificar integridade das instâncias no cluster e rotear o tráfego
+- proxy envoy é especificamente um proxy de nível de aplicativo, que podemos inserir no caminho de solicitações
+- podemos adicionar alguns comportamentos no envoy, como: circuit breaker, time limit, retry e etc.
+- envoy pode coletar dados de telemetria
+
+#### Alguns recursos do envoy
+- Service discovery
+- Load balancing
+- Roteamento de tráfego e solicitação
+- Deslocamento de tráfego e sombreamento de tráfego
+  - deslocamento -> uso em entregas, como versão canary
+  - sombreamento -> divisão do trafego, onde o serviço implantado, receberá cópias do tráfego. Ideal para testar serviços em produção, sem afetar o usuário
+- Resiliência de rede
+- Observabilidade
+- Tracing
+- Limitação de taxa
+
+##### Exemplo
+- neste projeto na pasta aula2, temos a configuração de um proxy envoy, onde redireciona toda requisição para o serviço httpbin
