@@ -82,3 +82,24 @@ spec:
 
 ##### Exemplo
 - neste projeto na pasta aula2, temos a configuração de um proxy envoy, onde redireciona toda requisição para o serviço httpbin
+
+# Gateway
+- Para o cliente fora do cluster acessar alguma serviço dentro da malha, ele utiliza o gateway
+- O istio faz uso do istioingress, como porta de entrada para o cluster
+
+## Virtual service
+- roteia o tráfego do gateway a um serviço específico
+
+## Uso de certificado
+- o certificado (nada mais é uma chave) deve ser disponibilizado via kubernetes secrets
+- o secrets precisa estar no ns do istio-system
+- podemos utilizar o protocolo https e fazer uso do tls, que combina a chave publica do cliente com a chave privada do servidor, gerando uma chave de sessão, que será utilizada na criptografica/descriptografia
+- o termo tls mutuo, é quando o cliente verifica a validade do certificado publico do servidor e o servidor verifica a validade do certificado publico do cliente
+- arquivos para configuração do gwt istio com tls mútuo
+```
+aula4/coolstore-gw-mtls.yaml
+add-certs.sh
+curl-test-tls-mutuo.sh
+para ver se o novo certificado está configurado: istioctl pc secret -n istio-system deploy/istio-ingressgateway (obs caso não, convém deletar o pod kubectl delete po -n istio-system -l app=istio-ingressgateway)
+```
+- existe a possibilidade de cada aplicação dentro da malha, tenha seu certificado. Podemos ver o manifesto coolstore-gw-multi-tls.yaml. obs: precisa ter os certificados no segredo kubernetes, dentro do namespace istio-system
