@@ -108,3 +108,9 @@ para ver se o novo certificado está configurado: istioctl pc secret -n istio-sy
 - um virtual service com tls no modo PASSTHROUGH, significa que o gwt vai inspecionar o cabeçalho SNI (para ver o backend de destino), vai encaminhar o tráfego par ao backend e este validará/encerrará a conexão tls.
 - ou seja, o gwt vai delegar a responsabilidade para o aplicativo lidar com o tls
 - ideal para aplicativos com comunicação TCP com tls, por exemplo:  banco de dados, cache, serviços de mensagerias e etc
+
+# Deployment vs release
+- podemos implantar uma nova versão so serviço, mas as requisições continuam sendo tratadas pela versão antiga
+- para verificar a qualidade da nova versão, podemos aos poucos direcionar algumas requisições a ela
+- dependendo do resultado, vamos direcionando mais e mais requisições ate que desligamos a versão antiga, soltando então a "release da nova versão"
+- essa abordagem e conhecida como implantação canary
