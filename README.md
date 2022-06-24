@@ -174,3 +174,25 @@ spec:
 - por ex:
   - 90% das requisições irão para a v1
   - 10% das requisições irão para a v2 
+
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog
+spec:
+  hosts:
+  - catalog
+  gateways:
+  - mesh
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+      weight: 90
+    - destination:
+        host: catalog
+        subset: version-v2
+      weight: 10
+```
