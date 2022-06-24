@@ -166,4 +166,5 @@ spec:
       version: v2
       
 ```
+- o modelo acima, o redirecionamento e feito a partir do gateway, mas podemos fazer via chamada, mudando no virtual service o valor da propriedade gateways para mesh
 - o redicionamento pode ser feito também, via informação inserida no header da requisição. obs: ainda faz necessária o manifesto destinationrule
