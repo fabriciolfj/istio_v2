@@ -148,8 +148,8 @@ spec:
   http:
   - route:
     - destination:
-        host: catalog
-        subset: version-v1
+        host: catalog #nome do servico
+        subset: version-v1 #propriedade no destination rule
     
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -160,7 +160,7 @@ spec:
   subsets:
   - name: version-v1
     labels:
-      version: v1
+      version: v1 #label vinculada ao deployment, que está vinculado ao servico
   - name: version-v2
     labels:
       version: v2
