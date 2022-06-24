@@ -108,3 +108,63 @@ para ver se o novo certificado está configurado: istioctl pc secret -n istio-sy
 - um virtual service com tls no modo PASSTHROUGH, significa que o gwt vai inspecionar o cabeçalho SNI (para ver o backend de destino), vai encaminhar o tráfego par ao backend e este validará/encerrará a conexão tls.
 - ou seja, o gwt vai delegar a responsabilidade para o aplicativo lidar com o tls
 - ideal para aplicativos com comunicação TCP com tls, por exemplo:  banco de dados, cache, serviços de mensagerias e etc
+
+# Deployment vs release
+- podemos implantar uma nova versão so serviço, mas as requisições continuam sendo tratadas pela versão antiga
+- para verificar a qualidade da nova versão, podemos aos poucos direcionar algumas requisições a ela
+- dependendo do resultado, vamos direcionando mais e mais requisições ate que desligamos a versão antiga, soltando então a "release da nova versão"
+- essa abordagem e conhecida como implantação canary
+
+## Recurso istio para roteamento
+- para direcionar o tráfico de uma requisição, faremos uso dos recursos abaixo do istio (na ordem de entrada de uma requisição):
+  -  gateway -> virtual service (podemos setar o subset) -> destination rule (com base no subset, ele redireciona ao serviço que possua a label vinculada)
+
+- abaixo códigos de exemplo:
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: catalog-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "catalog.istioinaction.io"
+    
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog-vs-from-gw
+spec:
+  hosts:
+  - "catalog.istioinaction.io"
+  gateways:
+  - catalog-gateway
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+    
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: catalog
+spec:
+  host: catalog.istioinaction.svc.cluster.local
+  subsets:
+  - name: version-v1
+    labels:
+      version: v1
+  - name: version-v2
+    labels:
+      version: v2
+      
+```
+- o modelo acima, o redirecionamento e feito a partir do gateway, mas podemos fazer via chamada, mudando no virtual service o valor da propriedade gateways para mesh
+- o redicionamento pode ser feito também, via informação inserida no header da requisição. obs: ainda faz necessária o manifesto destinationrule
