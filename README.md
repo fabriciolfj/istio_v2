@@ -114,3 +114,55 @@ para ver se o novo certificado está configurado: istioctl pc secret -n istio-sy
 - para verificar a qualidade da nova versão, podemos aos poucos direcionar algumas requisições a ela
 - dependendo do resultado, vamos direcionando mais e mais requisições ate que desligamos a versão antiga, soltando então a "release da nova versão"
 - essa abordagem e conhecida como implantação canary
+
+## Recurso istio para roteamento
+- para direcionar o tráfico de uma requisição, faremos uso dos recursos abaixo do istio (na ordem de entrada de uma requisição):
+  -  gateway -> virtual service (podemos setar o subset) -> destination rule (com base no subset, ele redireciona ao serviço que possua a label vinculada)
+
+- abaixo códigos de exemplo:
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: catalog-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "catalog.istioinaction.io"
+    
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog-vs-from-gw
+spec:
+  hosts:
+  - "catalog.istioinaction.io"
+  gateways:
+  - catalog-gateway
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+    
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: catalog
+spec:
+  host: catalog.istioinaction.svc.cluster.local
+  subsets:
+  - name: version-v1
+    labels:
+      version: v1
+  - name: version-v2
+    labels:
+      version: v2
+      
+```
