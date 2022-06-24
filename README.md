@@ -166,3 +166,4 @@ spec:
       version: v2
       
 ```
+- o redicionamento pode ser feito também, via informação inserida no header da requisição
