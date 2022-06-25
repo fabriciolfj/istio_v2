@@ -249,4 +249,4 @@ spec:
         max: 500
       interval: 30s
 ````
-
+- após a implantação do manifesto, podemos ver se este foi aplicado: kubectl get canary
