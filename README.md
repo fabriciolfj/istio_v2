@@ -212,5 +212,41 @@ helm install flagger flagger/flagger \
      --set meshProvider=istio \
      --set metricsServer=http://prometheus:9090
 ```
-
+- o flagger utiliza algumas métricas para ir aumentando o percentual de requisição, sendo direcionada a nova versão.
+````
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: catalog-release
+  namespace: istioinaction
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: catalog
+  progressDeadlineSeconds: 60
+  # Service / VirtualService Config
+  service:
+    name: catalog
+    port: 80
+    targetPort: 3000
+    gateways:
+    - mesh
+    hosts:
+    - catalog
+  analysis:
+    interval: 45s intervalor de 45 segundos
+    threshold: 5 se ocorrer 5 erros, voltar o direcionamento para versão antiga
+    maxWeight: 50 máximo de direcionamento
+    stepWeight: 10 vou aumentando 10% de direcionamento a cada 45s
+    metrics:
+    - name: request-success-rate
+      thresholdRange:
+        min: 99
+      interval: 1m
+    - name: request-duration
+      thresholdRange:
+        max: 500
+      interval: 30s
+````
 
