@@ -250,3 +250,28 @@ spec:
       interval: 30s
 ````
 - após a implantação do manifesto, podemos ver se este foi aplicado: kubectl get canary
+
+## Mirror
+- podemos utilizar o recurso de espelhamento, onde a requisição entra no serviço em produção e também na sua nova versão, mas esta no modo mirror
+- no modo mirror e ignorado qualquer tipo de falha, para não impactar na parte real
+
+````
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog
+spec:
+  hosts:
+  - catalog
+  gateways:
+    - mesh
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+      weight: 100
+    mirror:
+      host: catalog
+      subset: version-v2
+````
