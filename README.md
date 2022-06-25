@@ -148,8 +148,8 @@ spec:
   http:
   - route:
     - destination:
-        host: catalog
-        subset: version-v1
+        host: catalog #nome do servico
+        subset: version-v1 #propriedade no destination rule
     
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -160,11 +160,118 @@ spec:
   subsets:
   - name: version-v1
     labels:
-      version: v1
+      version: v1 #label vinculada ao deployment, que está vinculado ao servico
   - name: version-v2
     labels:
       version: v2
       
 ```
-- o modelo acima, o redirecionamento e feito a partir do gateway, mas podemos fazer via chamada, mudando no virtual service o valor da propriedade gateways para mesh
-- o redicionamento pode ser feito também, via informação inserida no header da requisição. obs: ainda faz necessária o manifesto destinationrule
+- o modelo acima, o redirecionamento e feito a partir do gateway, mas podemos fazer chamada interna, mudando no mesmo o valor da propriedade gateways para mesh (funciona para chamadas dentro da malha de serviços)
+- o redirecionamento pode ser feito também, via informação inserida no header da requisição. obs: ainda faz necessária o manifesto destinationrule
+
+## Implantação incremental
+- podemos utilizar a implantação canary de forma diferente, onde direcionamos um percentual a uma versão nova do serviço e outro a versão antiga.
+- por ex:
+  - 90% das requisições irão para a v1
+  - 10% das requisições irão para a v2 
+
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog
+spec:
+  hosts:
+  - catalog
+  gateways:
+  - mesh
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+      weight: 90
+    - destination:
+        host: catalog
+        subset: version-v2
+      weight: 10
+```
+
+## Automatização de releases
+- podemos utilizar o flagger, onde automatiza os lançamentos canary.
+- para instalar:
+```
+helm repo add flagger https://flagger.app
+kubectl apply -f \
+https://raw.githubusercontent.com/fluxcd/\
+flagger/main/artifacts/flagger/crd.yaml
+ 
+helm install flagger flagger/flagger \
+     --namespace=istio-system \
+     --set crd.create=false \
+     --set meshProvider=istio \
+     --set metricsServer=http://prometheus:9090
+```
+- o flagger utiliza algumas métricas para ir aumentando o percentual de requisição, sendo direcionada a nova versão.
+````
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: catalog-release
+  namespace: istioinaction
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: catalog
+  progressDeadlineSeconds: 60
+  # Service / VirtualService Config
+  service:
+    name: catalog
+    port: 80
+    targetPort: 3000
+    gateways:
+    - mesh
+    hosts:
+    - catalog
+  analysis:
+    interval: 45s intervalor de 45 segundos
+    threshold: 5 se ocorrer 5 erros, voltar o direcionamento para versão antiga
+    maxWeight: 50 máximo de direcionamento
+    stepWeight: 10 vou aumentando 10% de direcionamento a cada 45s
+    metrics:
+    - name: request-success-rate
+      thresholdRange:
+        min: 99
+      interval: 1m
+    - name: request-duration
+      thresholdRange:
+        max: 500
+      interval: 30s
+````
+- após a implantação do manifesto, podemos ver se este foi aplicado: kubectl get canary
+
+## Mirror
+- podemos utilizar o recurso de espelhamento, onde a requisição entra no serviço em produção e também na sua nova versão, mas esta no modo mirror
+- no modo mirror e ignorado qualquer tipo de falha, para não impactar na parte real
+
+````
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: catalog
+spec:
+  hosts:
+  - catalog
+  gateways:
+    - mesh
+  http:
+  - route:
+    - destination:
+        host: catalog
+        subset: version-v1
+      weight: 100
+    mirror:
+      host: catalog
+      subset: version-v2
+````
