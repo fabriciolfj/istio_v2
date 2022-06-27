@@ -253,7 +253,7 @@ spec:
 
 ## Mirror
 - podemos utilizar o recurso de espelhamento, onde a requisição entra no serviço em produção e também na sua nova versão, mas esta no modo mirror
-- no modo mirror e ignorado qualquer tipo de falha, para não impactar na parte real
+- no modo mirror é ignorado qualquer tipo de falha, para não impactar na parte real
 
 ````
 apiVersion: networking.istio.io/v1alpha3
