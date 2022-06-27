@@ -105,7 +105,7 @@ para ver se o novo certificado está configurado: istioctl pc secret -n istio-sy
 - existe a possibilidade de cada aplicação dentro da malha, tenha seu certificado. Podemos ver o manifesto coolstore-gw-multi-tls.yaml. obs: precisa ter os certificados no segredo kubernetes, dentro do namespace istio-system
 
 ## PASSTHROUGH
-- um virtual service com tls no modo PASSTHROUGH, significa que o gwt vai inspecionar o cabeçalho SNI (para ver o backend de destino), vai encaminhar o tráfego par ao backend e este validará/encerrará a conexão tls.
+- um virtual service com tls no modo PASSTHROUGH, significa que o gwt vai inspecionar o cabeçalho SNI (para ver o backend de destino), vai encaminhar o tráfego para o backend e este validará/encerrará a conexão tls.
 - ou seja, o gwt vai delegar a responsabilidade para o aplicativo lidar com o tls
 - ideal para aplicativos com comunicação TCP com tls, por exemplo:  banco de dados, cache, serviços de mensagerias e etc
 
