@@ -284,3 +284,8 @@ spec:
   
 ## Balanceador de carga do lado do cliente
 - O servidor informa ao cliente os endereços das instâncias disponíveis, e este pode utilizar seu algoritimo para direcionamento
+- por padrão o istio utiliza o Round robin, que funciona da seguinte forma:
+  - diante uma lista de ip do servidores
+  - enviamos a requisição para o primeiro e este vai para o final da fila
+  - a proxima requisição vai para o proximo da fila, quando este atender, ele vai para o final
+  - e assim segue.
