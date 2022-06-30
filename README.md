@@ -275,3 +275,12 @@ spec:
       host: catalog
       subset: version-v2
 ````
+
+# Resiliência
+- como o envoy/proxy ou sidecar fica próximo a aplicação, neste o istio faz as tratavias diante a falhas, como:
+  - retry
+  - circuit breaker
+  - fallback
+  
+## Balanceador de carga do lado do cliente
+- O servidor informa ao cliente os endereços das instâncias disponíveis, e este pode utilizar seu algoritimo para direcionamento
