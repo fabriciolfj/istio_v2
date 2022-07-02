@@ -289,3 +289,7 @@ spec:
   - enviamos a requisição para o primeiro e este vai para o final da fila
   - a proxima requisição vai para o proximo da fila, quando este atender, ele vai para o final
   - e assim segue.
+  
+## Algoritmos de balanceador de carga
+- dentre os algoritmos random, round robin e o last connection, o melhor é o last connection.
+- é 
