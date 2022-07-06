@@ -292,4 +292,25 @@ spec:
   
 ## Algoritmos de balanceador de carga
 - dentre os algoritmos random, round robin e o last connection, o melhor é o last connection.
-- é 
+- é o unico que leva em consideração a latência dos endpoints, e rediciona o que responde mais rápido.
+- Abaixo um exemplo de uso desses algoritmos. obs: o padrão do istio é o round robin:
+````
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: simple-backend-dr
+spec:
+  host: simple-backend.istioinaction.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN ou RANDOM ou ROUND_ROBIN
+````
+- uma boa ferramenta para teste desses algoritmos, é o fortio
+
+## Zona de localidade e disponibilidade
+- através de labels nos deployments da aplicação, o istio pode redicionar chamadas dentro da mesma zona de disponibilidade, por exemplo:\
+  - app1 chama app2(onde tem 2 instancias)
+    - app1 zone sa-east-1 
+    - app2 inst1 sa-east-2
+    - app2 inst2 us-west1-a
+  - dentro do istio, quando app1 chamar app2, ele direcionará a requisição para a instância 1, que encontra-se na mesma zona de disponibilidade
