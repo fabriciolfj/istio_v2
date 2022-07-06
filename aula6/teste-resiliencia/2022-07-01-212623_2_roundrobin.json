@@ -1,0 +1,132 @@
+{
+  "RunType": "HTTP",
+  "Labels": "roundrobin",
+  "StartTime": "2022-07-01T21:26:23.338501-03:00",
+  "RequestedQPS": "1000",
+  "RequestedDuration": "3s",
+  "ActualQPS": 45.92717081151175,
+  "ActualDuration": 3157172485,
+  "NumThreads": 8,
+  "Version": "1.34.1",
+  "DurationHistogram": {
+    "Count": 145,
+    "Min": 0.156633097,
+    "Max": 0.198856834,
+    "Sum": 24.887375254,
+    "Avg": 0.17163707071724138,
+    "StdDev": 0.008260458631641458,
+    "Data": [
+      {
+        "Start": 0.156633097,
+        "End": 0.198856834,
+        "Percent": 100,
+        "Count": 145
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.17759835530208334
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.18822759465104166
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.19460513826041667
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.19843166442604168
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.1988143170426042
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 0,
+    "Min": 0,
+    "Max": 0,
+    "Sum": 0,
+    "Avg": 0,
+    "StdDev": 0,
+    "Data": null,
+    "Percentiles": null
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 2,
+  "AccessLoggerInfo": "",
+  "RetCodes": {
+    "200": 145
+  },
+  "IPCountMap": {
+    "10.110.239.182:80": 8
+  },
+  "Insecure": false,
+  "CACert": "",
+  "Cert": "",
+  "Key": "",
+  "UnixDomainSocket": "",
+  "URL": "http://10.110.239.182",
+  "NumConnections": 1,
+  "Compression": false,
+  "DisableFastClient": false,
+  "HTTP10": false,
+  "DisableKeepAlive": false,
+  "AllowHalfClose": false,
+  "FollowRedirects": false,
+  "Resolve": "",
+  "HTTPReqTimeOut": 750000000,
+  "UserCredentials": "",
+  "ContentType": "",
+  "Payload": null,
+  "LogErrors": false,
+  "ID": 0,
+  "SequentialWarmup": false,
+  "ConnReuseRange": [
+    0,
+    0
+  ],
+  "Sizes": {
+    "Count": 145,
+    "Min": 1068,
+    "Max": 1071,
+    "Sum": 155160,
+    "Avg": 1070.0689655172414,
+    "StdDev": 0.6395598961745933,
+    "Data": [
+      {
+        "Start": 1068,
+        "End": 1071,
+        "Percent": 100,
+        "Count": 145
+      }
+    ],
+    "Percentiles": null
+  },
+  "HeaderSizes": {
+    "Count": 145,
+    "Min": 175,
+    "Max": 175,
+    "Sum": 25375,
+    "Avg": 175,
+    "StdDev": 0,
+    "Data": [
+      {
+        "Start": 175,
+        "End": 175,
+        "Percent": 100,
+        "Count": 145
+      }
+    ],
+    "Percentiles": null
+  },
+  "SocketCount": 8,
+  "AbortOn": 0
+}
