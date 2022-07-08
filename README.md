@@ -388,3 +388,11 @@ spec:
       baseEjectionTime: 5s tempo que o host fica inativo para chamada (numero de vezes que ele ficou inativo vezes esse tempo)
       maxEjectionPercent: 100 percentual de hosts do pool que posso inativar, com o critério 5xx, nesse caso todos e o circuit breaker e aberto
 ```
+
+# Observabilidade
+- é uma característica de um sistema, que é medida de forma a compreender sobre seu estado interno, olhando seu comportamento em tempo de execução.
+- como a maioria dos recursos do istio está em nível de rede, para solicitações, a sua capacidade de coletar métricas tambem está nesse nível.
+
+## Observabilidade x monitoramento
+- monitoramento é a prática de colegar métricas, logs, traces e etc.
+- observabilidade é o desenho do estado ideal do sistema, como base no monitoramento e tomando decisões quando este está se degradando.
