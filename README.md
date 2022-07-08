@@ -371,7 +371,7 @@ spec:
 - no exemplo acima se entrar mais uma requisição enquanto existir outra pendente, ocorrerá uma falha, pois somente é permitido 1 conexão pendente
 
 ## Pool de conexão: 
-- pulamos os endpoints com falha dentro do pool, e esgotar os endpoints, o circuitbreaker e aberto
+- pulamos os endpoints com falha dentro do pool, e se esgotar os endpoints, o circuitbreaker e aberto
 - exemplo de configuração
 
 ```
