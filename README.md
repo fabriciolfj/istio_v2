@@ -314,3 +314,77 @@ spec:
     - app2 inst1 sa-east-2
     - app2 inst2 us-west1-a
   - dentro do istio, quando app1 chamar app2, ele direcionará a requisição para a instância 1, que encontra-se na mesma zona de disponibilidade
+
+## Timeout
+- podemos definir um timeout no istio, através do recurso VirtualService
+
+## Retry
+- por padrão o istio realiza uma retentativa até 2 vezes
+- similar ao timeout, podemos configurar explicitamente o retry, através do virtual service
+  - obs: existe um comportamente padrão do istio para retry, por ex: status 503 ele efetua o retry, 500 não 
+  - podemos mudar esse comportamente atráves do virtual service, como no exemplo abaixo:
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: simple-backend-vs
+spec:
+  hosts:
+  - simple-backend
+  http:
+  - route:
+    - destination:
+        host: simple-backend
+    retries:
+      attempts: 2
+      retryOn: 5xx
+```
+- outro ponto importante é o tempo entre as retentativas, onde elas são multiplicada a cada tentativa, deve ser menor que o timeout configurado.
+- por exemplo:
+  - 3 tentativas a cada 500ms, mas temos um timeout de 1 segundo
+  - 1 - 500, 2 - 1000, 3 - 1500 (não vai funcionar) 
+  - a configuração de tempo entre as retentativas e através da propriedade filha do retry = perTryTimeout
+- Existe algumas configurações que modificam o comportamento padrão do istio, através do envoy filter (o sidecar), no entanto pode ter problemas de compatibilidade dependente da versão que você atualizar futuramente.
+
+# Circuit breaking
+- o istio não possui uma configuração explícita chamada circuitbreaking, e sim configurações para diminuir o direcionamento de solicitações a microservice com problema
+- algumas formas de configuração, descritas a seguir.
+- podemos também limitar as solicitações, criando um circuitbreaker conforme abaixo via destination rule:
+
+```
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: simple-backend-dr
+spec:
+  host: simple-backend.istioinaction.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1 -maximo de conexao no endpoint      
+      http:
+        http1MaxPendingRequests: 1 -maximo de solicitação em espera no endpoint      
+        maxRequestsPerConnection: 1 -> maximo de requisição por conexao no endpoint      
+        maxRetries: 1 -> máximo de retry no endpoint      
+        http2MaxRequests: 1 -> maximo de conexao paralela no endpoint      
+``` 
+- no exemplo acima se entrar mais uma requisição enquanto existir outra pendente, ocorrerá uma falha, pois somente é permitido 1 conexão pendente
+
+## Pool de conexão: 
+- pulamos os endpoints com falha dentro do pool, e esgotar os endpoints, o circuitbreaker e aberto
+- exemplo de configuração
+
+```
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: simple-backend-dr
+spec:
+  host: simple-backend.istioinaction.svc.cluster.local
+  trafficPolicy:
+    outlierDetection:
+      consecutive5xxErrors: 1 # somente erros na caso do code 5xx
+      interval: 5s tempo que o istio leva checa se o host pode ser retirado da lista de chamada, dentro do pool (tempo que pode cair solicitações e levar a erro, onde serão direcionadas ao host com problema)
+      baseEjectionTime: 5s tempo que o host fica inativo para chamada (numero de vezes que ele ficou inativo vezes esse tempo)
+      maxEjectionPercent: 100 percentual de hosts do pool que posso inativar, com o critério 5xx, nesse caso todos e o circuit breaker e aberto
+```
