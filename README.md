@@ -421,6 +421,6 @@ spec:
         proxy.istio.io/config: |-
           proxyStatsMatcher:
             inclusionPrefixes:
-            - "cluster.outbound|80||catalog.istioinaction"
+            - "cluster.outbound|80||catalog.istioinaction" --solicitacoes indo para catalog
    etc...         
 ````
