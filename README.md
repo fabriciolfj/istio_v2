@@ -424,3 +424,21 @@ spec:
             - "cluster.outbound|80||catalog.istioinaction" --solicitacoes indo para catalog
    etc...         
 ````
+### Alguns exemplos de metricas
+- para coletar metricas via curl, podemos executar:
+````
+kubectl exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15000/stats | grep catalog
+`````
+- cluster.outbound|80||catalog.circuit_breakers -> dados do circuit breaker
+- cluster.outbound|80||catalog.internal.upstream_rq_2xx -> requisições com sucesso dentro da malha (interna)
+- cluster.outbound|80||catalog.ssl.* -> dados de trafego ssl, dentro da malha
+- cluster.outbound|80||catalog.upstream_cx_* -> mostra o que está ocorrendo dentro da rede, se a conexão foi com sucesso, total de bytes e etc.
+- para listar os dados de todos os namespaces/cluster:
+````
+kubectl exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15000/clusters
+```
+
+
+
