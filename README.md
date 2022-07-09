@@ -438,7 +438,8 @@ kubectl exec -it deploy/webapp -c istio-proxy \
 ````
 kubectl exec -it deploy/webapp -c istio-proxy \
 -- curl localhost:15000/clusters
-```
+````
+- não precisamos ir a cada envoy para olhar essas métricas, podemos utilizar um serviço que efetua essa raspagem como prometheus.
 
 
 
