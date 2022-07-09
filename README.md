@@ -396,3 +396,31 @@ spec:
 ## Observabilidade x monitoramento
 - monitoramento é a prática de colegar métricas, logs, traces e etc.
 - observabilidade é o desenho do estado ideal do sistema, como base no monitoramento e tomando decisões quando este está se degradando.
+
+## Metricas
+- o proxy do istio ja coleta diversas métricas pra gente, sem necessidade de mudar nada na app
+- quando falamos proxy é o sidecar envoy ok
+- mas podemos personalizar essa coleta, adicionando mais metricas, no entanto cuidado para não sobrecarregar o serviço de coleta
+- exemplo abaixo:
+
+````
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webapp
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: |-
+          proxyStatsMatcher:
+            inclusionPrefixes:
+            - "cluster.outbound|80||catalog.istioinaction"
+   etc...         
+````
