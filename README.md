@@ -110,7 +110,7 @@ para ver se o novo certificado está configurado: istioctl pc secret -n istio-sy
 - ideal para aplicativos com comunicação TCP com tls, por exemplo:  banco de dados, cache, serviços de mensagerias e etc
 
 # Deployment vs release
-- podemos implantar uma nova versão so serviço, mas as requisições continuam sendo tratadas pela versão antiga
+- podemos implantar uma nova versão do serviço, mas as requisições continuam sendo tratadas pela versão antiga
 - para verificar a qualidade da nova versão, podemos aos poucos direcionar algumas requisições a ela
 - dependendo do resultado, vamos direcionando mais e mais requisições ate que desligamos a versão antiga, soltando então a "release da nova versão"
 - essa abordagem e conhecida como implantação canary
@@ -441,5 +441,41 @@ kubectl exec -it deploy/webapp -c istio-proxy \
 ````
 - não precisamos ir a cada envoy para olhar essas métricas, podemos utilizar um serviço que efetua essa raspagem como prometheus.
 
+### Raspagem de métricas com prometheus
+- Prometheus é um componente de coleta de métricas e um conjunto de ferramenta para monitoramente/alerta.
+- diferente de outros dispositivos, o prometheus puxa as métricas em vez de aguardar um agente enviá-las.
+- se já possuimos o istio configurado no nosso cluster, ele já expõe um rota que mostra os logs no formato que o prometheus reconhece
+```
+kubectl exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15090/stats/prometheus
+```
 
-
+#### Configuração prometheus
+- para o prometheus coletar as métricas, este precisa de alguns operadores, como ServiceMonitor ou PodMonitor (pega as métricas dos pods que possui um sidecar istio-proxy), abaixo um exemplo:
+```
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-component-monitor
+  namespace: prometheus
+  labels:
+    monitoring: istio-components
+    release: prom
+spec:
+  jobLabel: istio
+  targetLabels: [app]
+  selector:
+    matchExpressions:
+    - {key: istio, operator: In, values: [pilot]}
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: http-monitoring
+    interval: 15s
+```
+- algumas métricas conhecidas:
+  - istio_requests_total
+  - istio_request_duration_milliseconds
+  - istio_request_bytes
+  - istio_request_messages_total
+  - istio_response_messages_total
