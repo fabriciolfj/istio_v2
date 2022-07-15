@@ -425,6 +425,7 @@ spec:
    etc...         
 ````
 ### Alguns exemplos de metricas
+- /stats é um plugin do envoy que espões as métricas
 - para coletar metricas via curl, podemos executar:
 ````
 kubectl exec -it deploy/webapp -c istio-proxy \
@@ -479,3 +480,239 @@ spec:
   - istio_request_bytes
   - istio_request_messages_total
   - istio_response_messages_total
+
+### Metricas, dimensões e atributos
+- metrica é um contador, medidor ou histograma/distribuição de telemetria
+- dimensão é o contexto da medição 
+- atributo são os participantes, utilizados para definir um valor da dimensão
+- as métricas do istio são configuradas no plugin proxy de estatísticas, usando um recurso EnvoyFilter.
+- os filtros pegando os dados e disponibilizam via /stats
+- para adicionar novas dimensões a métrica, por exemplo a métrica istio_request_total, temos que utilizar o recurso IstioOperator, conforme abaixo:
+```
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: demo
+  values:
+    telemetry:
+      v2:
+        prometheus:
+          configOverride:
+            inboundSidecar: #entrada no sidecar
+              metrics:
+              - name: requests_total
+                dimensions:
+                  upstream_proxy_version: upstream_peer.istio_version #nova dimensão
+                  source_mesh_id: node.metadata['MESH_ID'] #nova dimensão
+                tags_to_remove:
+                - request_protocol #estamos removendo essa métrica
+            outboundSidecar: #saida do sidecar
+              metrics:
+              - name: requests_total
+                dimensions:
+                  upstream_proxy_version: upstream_peer.istio_version
+                  source_mesh_id: node.metadata['MESH_ID']
+                tags_to_remove:
+                - request_protocol #estamos removendo essa métrica
+            gateway:
+              metrics:
+              - name: requests_total
+                dimensions:
+                  upstream_proxy_version: upstream_peer.istio_version
+                  source_mesh_id: node.metadata['MESH_ID']
+                tags_to_remove:
+                - request_protocol
+```
+- para instalar utilize o istioctl
+```
+istioctl install operador.yml
+```
+- para ver essa nova dimensão, precisamos anotar o deployment da nossa aplicação, com anotação sidecar.istio.io/extraStatTags, na tag spec.template.metadata. Conforme exemplo abaixo:
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webapp
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: |-
+          extraStatTags: 
+          - "upstream_proxy_version"
+          - "source_mesh_id"
+      labels:
+        app: webapp
+    spec:
+```
+- efetua uma chamada ao serviço, e verifique se consta a nova métrica via:
+```
+kubectl -n istioinaction exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15000/stats/prometheus | grep istio_requests_total
+```
+
+### Criando sua própria métrica
+- acima adicionamos uma nova dimensão a uma métrica existente.
+- as novas métricas ou modificação de existentes, serve a todo o cluster, novas versões do istio podemos granular por namespace por exemplo.
+- abaixo um exemplo de criação de métricas:
+```
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: demo
+  values:
+    telemetry:
+      v2:
+        prometheus:
+          configOverride:
+            inboundSidecar:
+              definitions:
+              - name: get_calls
+                type: COUNTER #tipo contagem
+                value: "(request.method.startsWith('GET') ? 1 : 0)"
+            outboundSidecar:
+              definitions:
+              - name: get_calls
+                type: COUNTER
+                value: "(request.method.startsWith('GET') ? 1 : 0)"
+            gateway:
+              definitions:
+              - name: get_calls
+                type: COUNTER
+                value: "(request.method.startsWith('GET') ? 1 : 0)"
+```
+- obs: por padrão o istio coloca um prefixo istio_, nesse caso ficará isito_get_calls (quantas chamdas get de entrada e saida, no caso acima)
+- para aplicar o manifesto acima, utilizamos o istioctl:
+```
+istioctl install -f new-metric.yaml
+```
+- para nossas aplicações participarem dessa métrica, conforme dito acima, precisamos da anotação correspondente no seu deplomente:
+```
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: |-
+          proxyStatsMatcher:
+            inclusionPrefixes:
+            - "istio_get_calls"
+```
+- faça algumas chamadas ao serviço e depois consulte:
+```
+kubectl -n istioinaction exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15000/stats/prometheus | grep istio_get_calls
+```
+
+### Criando atributos
+- podemos adicionar novos atributos ou novos atributos que na verdade é a combinação de atributos existentes.
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: attribute-gen-example
+  namespace: istioinaction
+spec:
+  configPatches:
+  ## Sidecar Outbound 
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_OUTBOUND
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: istio.stats
+      proxy:
+        proxyVersion: ^1\.13.*
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.attributegen
+        typed_config:
+          '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+          value:
+            config:
+              configuration:
+                '@type': type.googleapis.com/google.protobuf.StringValue
+                value: |
+                  {
+                    "attributes": [
+                      {
+                        "output_attribute": "istio_operationId", #novo atributo
+                        "match": [
+                         {
+                           "value": "getitems",
+                           "condition": "request.url_path == '/items' && request.method == 'GET'" #identificar e contar chamadas para api /items usando get
+                         },
+                         {
+                           "value": "createitem",
+                           "condition": "request.url_path == '/items' && request.method == 'POST'"
+                         },     
+                         {
+                           "value": "deleteitem",
+                           "condition": "request.url_path == '/items' && request.method == 'DELETE'"
+                         }                                             
+                       ]
+                      }
+                    ]
+                  }
+              vm_config:
+                code:
+                  local:
+                    inline_string: envoy.wasm.attributegen
+                runtime: envoy.wasm.runtime.null
+```
+- para aplicar utiliza o kubectl
+- após a adição desse atributos, criamos dimensões que farão uso deles:
+```
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  profile: demo
+  values:
+    telemetry:
+      v2:
+        prometheus:
+          configOverride:
+            outboundSidecar:
+              metrics:
+              - name: requests_total
+                dimensions:
+                  upstream_operation: istio_operationId #a dimensao usando o novo atributo
+```
+- para instalar o istio operator utilize o istioctl install -y -f new-operator.yaml
+- por fim vincule a dimensão no deployment da sua aplicação
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webapp
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: |-
+          extraStatTags: 
+          - "upstream_operation"
+      labels:
+        app: webapp
+    spec:
+```
+- para consultar se o novo atributo da nova dimensão está em uso:
+```
+kubectl -n istioinaction exec -it deploy/webapp -c istio-proxy \
+-- curl localhost:15000/stats/prometheus | grep istio_requests_total
+```
