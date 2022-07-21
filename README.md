@@ -716,3 +716,69 @@ spec:
 kubectl -n istioinaction exec -it deploy/webapp -c istio-proxy \
 -- curl localhost:15000/stats/prometheus | grep istio_requests_total
 ```
+
+## OpenTelemetry/OpenTracing
+- é uma estrutura orientada para a comunidade que inclui o openTracing, 
+- que é uma especificação que captura conceitos de apis relacionados ao rastreamento distribuído de solicitações externas
+- este mecanismo ajuda a reunir um quadro completo de um fluxo de solicitaçãp
+- que pode ser usado para identificar áreas com mau comportamento na nossa arquitetura 
+- de forma simples o rastreamento e contido de spans, 
+- compartilhando esses spans com um mecanismo opentracing e propagando um contexto de rastreamento para qualquer um dos serviços, que ele chamar posteriormente
+- dentro dos spans possui hora de inicio e fim da operação, nome da operação e um conjunto de tags e logs
+- a mesma operação corre no serviço que recebeu a solicitção e se repeti caso este precise requisitar outro microservice
+- cada span tem seu id e um conjunto de span formam um trace (que também possui um id)
+
+### Funcionamento do tracing no istio
+- o proxy de serviço captura a requisição
+- enriquece o cabeçalho da requisição com os dados do tracing (x-request-id, x-b3-traceid, x-b3-spanid e etc)
+- se receber uma requisição ja com o cabeçalho enriquecido, tratará como não sendo o start da requisição e complementará as informações para no fim formar um trace.
+- em resumo, o cabeçalho da requisição, deve ser propagado a outras requisições
+- istio oferece suporte a várias implementações da especificação opentracing, conforme podemos ver o operador abaixo:\
+
+```
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+spec:
+  meshConfig:
+    defaultConfig:
+      tracing:
+        zipkin:
+          address: zipkin.istio-system:9411
+```
+
+### Instalação
+- kubectl apply -f samples/addons/jaeger.yaml
+- para produção consulte a doc do jaeger
+- podemos instalar um operador de trace, conforme abaixo: 
+```
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+spec:
+  meshConfig:
+    defaultConfig:
+      tracing:
+        sampling: 100
+        zipkin:
+          address: zipkin.istio-system:9411
+          
+istioctl install -y -f install-istio-tracing-zipkin.yaml          
+```
+- para ter uma granularidade menor de rastreabilidade, podemos colocar anotações nos nosso deployments, conforme o exemplo abaixo:
+````
+apiVersion: apps/v1
+kind: Deployment
+...
+spec:
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: |
+          tracing:
+            zipkin:
+              address: zipkin.istio-system:9411
+````
+- 8.2.3
