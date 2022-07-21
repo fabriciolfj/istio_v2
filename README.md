@@ -778,7 +778,62 @@ spec:
       annotations:
         proxy.istio.io/config: |
           tracing:
+            sampling:10 #amostracao em 10% das solicitaçoes seram enviadas ao jaeguer
+            custom_tag:
+              literal:
+                value: "test tag" #tag para personalizar o rastreamento
             zipkin:
-              address: zipkin.istio-system:9411
+              address: zipkin.istio-system:9411 #configuracao de conexao com o jaeguer, para envia o rastreamento
 ````
-- 8.2.3
+
+### Rastreamentos específicos
+- restreamento 100% não é indicado em produção, no entando diante de uma problema, podemos forçar a rastreabilidade via um parametro no header. Por exemplo:
+```
+curl -H "x-envoy-force-trace: true"  \
+-H "Host: webapp.istioinaction.io" http://localhost/api/catalog
+```
+
+## Kiali
+- oferece um grafico do cluster, mostra a comunicação de desses componentes
+- dependi do prometheus para montar esse grafico, pois e dele que extrai as métricas
+- instalacao:
+```
+kubectl create ns kiali-operator
+helm install \
+      --set cr.create=true \
+      --set cr.namespace=istio-system \
+      --namespace kiali-operator \
+      --repo https://kiali.org/helm-charts \
+      --version 1.40.1 \
+      kiali-operator \
+      kiali-operator
+```
+- criando a instância web, onde se conecta com o nosso prometheus e o jaeguer:
+```
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  namespace: istio-system
+  name: kiali
+spec:
+  istio_namespace: "istio-system"
+  istio_component_namespaces:
+    prometheus: prometheus
+  auth:
+    strategy: anonymous
+  deployment:
+    accessible_namespaces:
+    - '**'
+  external_services:
+    prometheus:
+      cache_duration: 10
+      cache_enabled: true
+      cache_expiration: 300
+      url: "http://prom-kube-prometheus-stack-prometheus.prometheus:9090"
+    tracing:
+      enabled: true
+      in_cluster_url: "http://tracing.istio-system:16685/jaeger"
+      use_grpc: true
+```
+
+- cap 9
