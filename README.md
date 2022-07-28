@@ -6,7 +6,7 @@
 ```
 istioctl install --set profile=demo -y
 kubectl apply -f ./samples/addons
-kubectl label namespace istioinaction istio-injection=enabled
+
 ```
 
 ### Plano de controle
@@ -836,4 +836,21 @@ spec:
       use_grpc: true
 ```
 
-- cap 9
+# Segurança
+## SPIFFE
+- um conjunto de padrões de código aberto para fornecer identidade a cargas de trabalho em ambientes altamente dinâmicos e heterogênios.
+
+## Funcionamento da segurança no istio
+- o proxy envoy intercepta a requisição 
+- istio utiliza tls mutuo por padrão (serviço solicitante se autentica no serviço que recebrá a requisiçao e vice/versa)
+
+#### Recuso peerAuthentication 
+- configura o proxy para autenticar o tráfego de serviço a serviço
+- caso seja bem-sucedido, o proxy extrai as informações codificadas no certificado do peer e as disponibiliza para autorização
+
+#### Recurso requestAuthentication 
+- configura o proxy para autenticar as credenciais do usuario final, ao servidor que as emitiram
+- caso seja bem sucedido, extrai as informações codificadas na credencial e as disponibilizam para autorizar a solicitação
+
+#### Recurso authorizationPolicy
+- configura o proxy para autorizar ou rejeitar solicitações com base nos dados extraídos pelos 2 recursos acima
