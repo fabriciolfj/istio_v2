@@ -847,6 +847,66 @@ spec:
 #### Recuso peerAuthentication 
 - configura o proxy para autenticar o tráfego de serviço a serviço
 - caso seja bem-sucedido, o proxy extrai as informações codificadas no certificado do peer e as disponibiliza para autorização
+- podemos configurar para exigir tls ou ser permissivo
+- a configuração pode ser aplicada em diferentes escopos, como: malha inteira, namespace ou carga específica.
+- abaixo um exemplo que exigi criptografia em toda a malha (mutual tls)
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "PeerAuthentication"
+metadata:
+  name: "default"
+  namespace: "istio-system" #quando vinculamos ao namespace do istio, aplicamos essa regra na malha inteira
+spec:
+  mtls:
+    mode: STRICT
+```
+- para aceitar solicitações apenas de texto simples sem serem criptografadas, deixamos como PERMISSIVE no lugar de STRICT
+- exemplo baixo deixa como permissivo as solicitações de texto simples, apenas no namespace istioinaction:
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "PeerAuthentication"
+metadata:
+  name: "default"
+  namespace: "istioinaction"
+spec:
+  mtls:
+    mode: PERMISSIVE
+```
+- caso queria manter a segurança dentro do seu namespace, e deixar livre apenas uma carga de trabalho, utilizamos o selector.
+- No exemplo abaixo, ele não exigirá criptografia para comunicação com webapp, dentro do namespace istioinaction
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "PeerAuthentication"
+metadata:
+  name: "webapp"
+  namespace: "istioinaction"
+spec:
+  selector:
+    matchLabels:
+      app: "webapp"
+  mtls:
+    mode: PERMISSIVE
+```
+- para testar, podemos executar o script abaixo:
+```
+kubectl -n default exec deploy/sleep -c sleep -- \
+     curl -s webapp.istioinaction/api/catalog
+
+```
+- para olhar os detalhes da rede, ative tcpdump (não faça em produção, pois abre brecha para invação)
+```
+istioctl install -y --set profile=demo \
+     --set values.global.proxy.privileged=true
+````
+- apague os pods
+- execute o script abaixo, onde ele ficará monitorando
+````
+kubectl -n istioinaction exec deploy/webapp -c istio-proxy \
+     -- sudo tcpdump -l --immediate-mode -vv -s 0 \
+     '(((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'
+````
+- faça a chamada ao serviço que deseje
+
 
 #### Recurso requestAuthentication 
 - configura o proxy para autenticar as credenciais do usuario final, ao servidor que as emitiram
@@ -854,3 +914,33 @@ spec:
 
 #### Recurso authorizationPolicy
 - configura o proxy para autorizar ou rejeitar solicitações com base nos dados extraídos pelos 2 recursos acima
+
+#### AuthorizationPolicy
+- uma api declarativa dentro do istio, aonde posso definir políticas de acesso, seja dentro da malha, namespace ou carga de trabalho
+- essa api fica no proxy (sidecar envoy), onde todas as decisões são tomadas através deste recurso
+- um exemplo de politica, dando acesso para api catalog. obs: a política apenas e ativa se atender a regra
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "allow-catalog-requests-in-web-app"
+  namespace: istioinaction
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  action: ALLOW #permito tudo se atender a regra
+  rules: #regras
+  - to:  #para
+    - operation:
+        paths: ["/api/catalog*"]
+```
+
+##### Detalhando regras
+- from (para): especifica a origem da requisição, que podemos enriquecer com:
+  - principals: lista de identidades (SPIFFEID, precisa do tls ativo para funcionar)
+  - notPrincipals: aplica quando a requisição vir uma identificada listada aqui (precisa do tls ativo para funcionar)
+  - namespaces: lista os namespaces de onde virão as requisições
+  - ipBlocks: lista de ips que ativarão a regra, nesse caso bloqueando o acesso
+- to: específica a operação da requisição
+- when: específica as condições que precisam ser atendidas para a regra ativar
