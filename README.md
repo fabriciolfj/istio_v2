@@ -944,3 +944,34 @@ spec:
   - ipBlocks: lista de ips que ativarão a regra, nesse caso bloqueando o acesso
 - to: específica a operação da requisição
 - when: específica as condições que precisam ser atendidas para a regra ativar
+
+##### Exemplo - Depurando uma regra
+- aplicamos a regra abaixo:
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "allow-catalog-requests-in-web-app"
+  namespace: istioinaction
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  rules:
+  - to:
+    - operation:
+        paths: ["/api/catalog*"]
+  action: ALLOW
+```
+
+- executamos o script abaixo e teremos uma resposta com sucesso, pois atendeu a regra:
+```
+kubectl -n default exec deploy/sleep -c sleep -- \
+      curl -sSL webapp.istioinaction/api/catalog
+```
+- executamos o script baixo e teremos uma resposta sem sucesso, pois não atender a regra:
+```
+kubectl -n default exec deploy/sleep -c sleep -- \
+      curl -sSL webapp.istioinaction/hello/world
+```
+- quando utilizamos politica allow, ele nega todas as requisições que não atendem a regra.
