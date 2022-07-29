@@ -918,7 +918,7 @@ kubectl -n istioinaction exec deploy/webapp -c istio-proxy \
 #### AuthorizationPolicy
 - uma api declarativa dentro do istio, aonde posso definir políticas de acesso, seja dentro da malha, namespace ou carga de trabalho
 - essa api fica no proxy (sidecar envoy), onde todas as decisões são tomadas através deste recurso
-- um exemplo de politica, dando acesso para api catalog. obs: a política apenas e ativa se atender a regra
+- um exemplo de politica, dando acesso para api catalog. obs: a política apenas é ativada se atender a regra
 ```
 apiVersion: "security.istio.io/v1beta1"
 kind: "AuthorizationPolicy"
