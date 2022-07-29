@@ -945,6 +945,7 @@ spec:
 - to: específica a operação da requisição
 - when: específica as condições que precisam ser atendidas para a regra ativar
 
+
 ##### Exemplo - Depurando uma regra
 - aplicamos a regra abaixo:
 ```
