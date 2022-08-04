@@ -911,6 +911,7 @@ kubectl -n istioinaction exec deploy/webapp -c istio-proxy \
 #### Recurso requestAuthentication 
 - configura o proxy para autenticar as credenciais do usuario final, ao servidor que as emitiram
 - caso seja bem sucedido, extrai as informações codificadas na credencial e as disponibilizam para autorizar a solicitação
+- utiliza op jwt
 
 #### Recurso authorizationPolicy
 - configura o proxy para autorizar ou rejeitar solicitações com base nos dados extraídos pelos 2 recursos acima
@@ -976,3 +977,203 @@ kubectl -n default exec deploy/sleep -c sleep -- \
       curl -sSL webapp.istioinaction/hello/world
 ```
 - quando utilizamos politica allow, ele nega todas as requisições que não atendem a regra.
+- podemos tambem negar todas as solicitações, quando não especificamos nenhuma regra:
+```
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+ name: deny-all
+ namespace: istio-system
+spec: {}
+```
+- ao contrário é verdadeiro, quando aplicamos o allow-all, e não definimos nenhuma regra, significa que todas as requisições serão aceitas
+```
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-all
+  namespace: istio-system
+spec:
+  rules:
+  - {}
+```
+- podemos permitir solicitações para um verbo http, originária de um namespace.
+- no exemplo abaixo, qualquer get vindo do namespace default, será aceito no namespace istioinaction. obs: o serviço de origem no namespace default, precisa de um sidecar istio para funcionar, pois é a unica forma de identificar sua autenticidade
+````
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+ name: "webapp-allow-view-default-ns" #nome personalizado
+ namespace: istioinaction
+spec:
+  rules:
+  - from:
+    - source:
+        namespaces: ["default"]
+    to:
+    - operation:
+        methods: ["GET"]
+````
+- uma outra alternativa seria liberar o acesso ao serviço que queremos no namespace istioinaction, sem especificar o namespace de destino
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+ name: "webapp-allow-unauthenticated-view"
+ namespace: istioinaction
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  rules:
+  - to:
+    - operation:
+        methods: ["GET"]
+```
+- podemos aplicar autorização por condições, no exemplo a seguir verificar a permissão do usuário se é admin, caso positivo ele pode ter acesso (nessa situação aonde possui o grupo no token jwt)
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "allow-mesh-all-ops-admin"
+  namespace: istio-system
+spec:
+  rules:
+    - from:
+      - source:
+          requestPrincipals: ["auth@istioinaction.io/*"]
+      when:
+      - key: request.auth.claims[group]
+        values: ["admin"]
+```
+- um modelo mais complexo para compreender a aplicabilidade das regras
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "allow-mesh-all-ops-admin"
+  namespace: istio-system
+spec:
+  rules:
+    - from: (E)
+      - source: OU
+          principals: ["cluster.local/ns/istioinaction/sa/webapp"]
+      - source: OU
+          namespaces: ["default"]
+      to: (E)
+      - operation: OU
+          methods: ["GET"] E
+          paths: ["/users*"] E
+      - operation: OU
+          methods: ["POST"] E
+          paths: ["/data"] E
+      when: (E) 
+      - key: request.auth.claims[group]------------------  E
+        values: ["beta-tester", "admin", "developer"]-----
+```
+- no exemplo acima o from, to e when são condicionais AND (todas devem atender)
+- dentro do from, umas das origens devem atender (OR)
+- dentro do to, umas das operações devem atender (OR)
+- para a operação atender, ambas devem corresponder (AND)
+
+### Resumo da aplicabilidade das regras
+- Policy custom -> são avaliadas primeiro, atendeu, aceita a solicitação
+- DENY -> se a requisição não cair em nenhuma condição, ela é aceita
+- ALLOW -> se a requisição corresponder a policy desta, é aceita
+- Quando uma política catch-all está presente, ela determina se a solicitação foi aprovada.
+- Quando uma política catch-all está ausente, a solicitação é:
+  - Permitido se não houver políticas de PERMISSÃO ou se for
+  - Rejeitado quando há políticas ALLOW, mas nenhuma corresponde.
+
+## Autenticação e autorização de um usuário final
+- para autenticação e autorização de um usuário final, o istio faz uso do JWT
+- jwt é emitido por um servidor de autenticação 
+- que contém uma chave publica exposta para validar o mesmo (conhecido como json web key set JWKS)
+- o jwt é assinado por uma chave privada
+- nesse contexto, o usuário final é aquele que recebeu um token, diante autenticação em um servidor
+- a autenticação/autorização é feita direto no gwt do istio
+
+### RequestAuthentication
+- recurso utilizado para validar o token jwt
+- ele extrai as informações do jwt e armazena nos metadados de filtro
+- esses metadados são utilizados por políticas de autorização
+- metadados é um conjunto de chave-valor, que ficam disponíveis no proxy, durante o processamento da solicitação entre filtros
+- Por exemplo, se uma solicitação com o grupo de declarações: admin for validada, esse valor será armazenado como metadados de filtro, que é usado por políticas de autorização para permitir ou negar a solicitação.
+- obs: o requestAuthentication não impõe autorizações, ainda vamos precisar de um AuthorizationPolicy
+- um exemplo de criação de um requestAuthentication, validando token emitido por auth@istioinaction.io
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "RequestAuthentication"
+metadata:
+ name: "jwt-token-request-authn"
+ namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      app: istio-ingressgateway
+ jwtRules:
+ - issuer: "auth@istioinaction.io"
+   jwks: |
+     { "keys": [{"e":"AQAB","kid":"##REDACTED##",
+      ➥"kty":"RSA","n":"##REDACTED##"}]}
+```
+- para negar uma requisição sem token, criamos uma policy:
+```
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+ name: app-gw-requires-jwt
+ namespace: istio-system
+spec:
+ selector:
+   matchLabels:
+     app: istio-ingressgateway
+ action: DENY
+ rules:
+ - from:
+   - source:
+       notRequestPrincipals: ["*"]
+   to:
+   - operation:
+       hosts: ["webapp.istioinaction.io"]
+```
+- podemos dar autorização conforme a permissão do usuário, encontrada no token
+- permitir apenas GET
+```
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+ name: allow-all-with-jwt-to-webapp
+ namespace: istio-system
+spec:
+ selector:
+   matchLabels:
+     app: istio-ingressgateway
+ action: ALLOW
+ rules:
+ - from:
+   - source:
+       requestPrincipals: ["auth@istioinaction.io/*"]
+   to:
+   - operation:
+       hosts: ["webapp.istioinaction.io"]
+       methods: ["GET"]
+```
+
+- se for admin, permitir tudo
+```
+apiVersion: "security.istio.io/v1beta1"
+kind: "AuthorizationPolicy"
+metadata:
+  name: "allow-mesh-all-ops-admin"
+  namespace: istio-system
+spec:
+  rules:
+    - from:
+      - source:
+          requestPrincipals: ["auth@istioinaction.io/*"]
+      when:
+      - key: request.auth.claims[group]
+        values: ["admin"]
+```
+- 9.5
