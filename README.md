@@ -837,6 +837,9 @@ spec:
 ```
 
 # Segurança
+## RBAC
+- istio utiliza recursos de acesso baseado emm função, prontos para uso do envoy para implementar a autorização.
+
 ## SPIFFE
 - um conjunto de padrões de código aberto para fornecer identidade a cargas de trabalho em ambientes altamente dinâmicos e heterogênios.
 
@@ -1176,4 +1179,7 @@ spec:
       - key: request.auth.claims[group]
         values: ["admin"]
 ```
-- 9.5
+### Autenticação externa
+- podemos fazer uso de um serviço externo para autenticar nossa requisição
+- esse serviço pode estar dentro ou fora da malha
+- é possível implantar um serviço ExtAuthz como um sidecar para seu aplicativo para minimizar a sobrecarga da rede
