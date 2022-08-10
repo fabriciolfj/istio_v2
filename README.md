@@ -1232,3 +1232,4 @@ spec:
         paths: ["/"]
 ````
 - o nome especificado no provider, deve ser o mesmo inserido no configmap do istio
+- esse exemplo é bem simples, ele espera o cabeçalho x-ext-authz com allow ou deny
