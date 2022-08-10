@@ -1183,3 +1183,9 @@ spec:
 - podemos fazer uso de um serviço externo para autenticar nossa requisição
 - esse serviço pode estar dentro ou fora da malha
 - é possível implantar um serviço ExtAuthz como um sidecar para seu aplicativo para minimizar a sobrecarga da rede
+- podemos implantar um serviço de autorização de exemplo, que vem com o istio:
+```
+$  kubectl apply \
+     -f istio-1.13.0/samples/extauthz/ext-authz.yaml \
+     -n istioinaction
+```
