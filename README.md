@@ -1230,3 +1230,5 @@ spec:
   - to:
     - operation:
         paths: ["/"]
+````
+- o nome especificado no provider, deve ser o mesmo inserido no configmap do istio
