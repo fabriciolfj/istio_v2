@@ -1189,3 +1189,21 @@ $  kubectl apply \
      -f istio-1.13.0/samples/extauthz/ext-authz.yaml \
      -n istioinaction
 ```
+- com um serivço externo de autorização configurado, temos que colocar uma política, vinculando a este:
+````
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ext-authz
+  namespace: istioinaction
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  action: CUSTOM
+  provider:
+    name: sample-ext-authz-http
+  rules:
+  - to:
+    - operation:
+        paths: ["/"]
