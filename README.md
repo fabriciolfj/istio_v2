@@ -1189,6 +1189,29 @@ $  kubectl apply \
      -f istio-1.13.0/samples/extauthz/ext-authz.yaml \
      -n istioinaction
 ```
+- em seguida temos que atualizar a configuraçao do istio, no configmap istio, ns istio-system:
+````
+apiVersion: v1
+data:
+  mesh: |-
+    extensionProviders:
+    - name: "sample-ext-authz-http"
+      envoyExtAuthzHttp:
+        service: "ext-authz.istioinaction.svc.cluster.local"
+        port: "8000"
+        includeHeadersInCheck: ["x-ext-authz"]
+    accessLogFile: /dev/stdout
+    defaultConfig:
+      discoveryAddress: istiod.istio-system.svc:15012
+      proxyMetadata: {}
+      tracing:
+        zipkin:
+          address: zipkin.istio-system:9411
+    enablePrometheusMerge: true
+    rootNamespace: istio-system
+    trustDomain: cluster.local
+  meshNetworks: 'networks: {}'
+````
 - com um serivço externo de autorização configurado, temos que colocar uma política, vinculando a este:
 ````
 apiVersion: security.istio.io/v1beta1
