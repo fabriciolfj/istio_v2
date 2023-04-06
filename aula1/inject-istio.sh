@@ -1,1 +1,1 @@
-kubectl label namespace istioinaction istio-injection=enabled
+kubectl label namespace example istio-injection=enabled
